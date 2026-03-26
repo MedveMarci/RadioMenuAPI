@@ -251,11 +251,5 @@ public class MyEventHandler : CustomEventsHandler
 
 ---
 
-## Requirements
-
-- [LabAPI](https://github.com/northwood-studios/LabAPI)
-
----
-
 ## Credits
 - Created by [MedveMarci](https://github.com/MedveMarci)

@@ -1,5 +1,7 @@
 # RadioMenuAPI
 
+[![Version](https://img.shields.io/github/v/release/MedveMarci/RadioMenuAPI?&label=Version&color=d500ff)](https://github.com/MedveMarci/RadioMenuAPI/releases/latest) [![LabAPI Version](https://img.shields.io/badge/LabAPI_Version-1.1.6 )](https://github.com/northwood-studios/LabAPI/releases/tag/1.1.6) [![SCP:SL Version](https://img.shields.io/badge/SCP:SL_Version-14.2.6-blue?&color=e5b200)](https://store.steampowered.com/app/700330/SCP_Secret_Laboratory/) [![Total Downloads](https://img.shields.io/github/downloads/MedveMarci/RadioMenuAPI/total.svg?label=Total%20Downloads&color=&color=ffbf00)]()<br>
+
 A [LabAPI](https://github.com/northwood-studios/LabAPI) plugin for [SCP: Secret Laboratory](https://store.steampowered.com/app/700330/SCP_Secret_Laboratory/) that provides an API for creating interactive radio-based menus for players.
 
 ---

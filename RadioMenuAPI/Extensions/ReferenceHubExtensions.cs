@@ -9,7 +9,7 @@ public static class ReferenceHubExtensions
         /// <summary>Gives the player a radio and assigns a new menu to it.</summary>
         /// <param name="title">Optional title displayed as the menu header.</param>
         /// <returns>The created <see cref="RadioMenu"/>, or <c>null</c> if the radio could not be added.</returns>
-        public RadioMenu GiveRadioMenu(string? title = null)
+        public RadioMenu? GiveRadioMenu(string? title = null)
         {
             var player = Player.Get(hub);
             return player == null ? null : RadioMenuManager.GiveRadioMenu(player, title);
@@ -25,7 +25,7 @@ public static class ReferenceHubExtensions
         }
 
         /// <summary>Gets the <see cref="RadioMenu"/> the player currently has open, or <c>null</c>.</summary>
-        public RadioMenu GetActiveRadioMenu()
+        public RadioMenu? GetActiveRadioMenu()
         {
             var id = hub.GetInstanceID();
             if (!RadioMenuManager.PlayerActiveRadio.TryGetValue(id, out var serial)) return null;
@@ -34,7 +34,7 @@ public static class ReferenceHubExtensions
         }
 
         /// <summary>Gets the currently highlighted <see cref="RadioMenuItem"/>, or <c>null</c>.</summary>
-        public RadioMenuItem GetSelectedRadioMenuItem()
+        public RadioMenuItem? GetSelectedRadioMenuItem()
         {
             var player = Player.Get(hub);
             return player == null ? null : RadioMenuManager.GetSelectedItem(player);

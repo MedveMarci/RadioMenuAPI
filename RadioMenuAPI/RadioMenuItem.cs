@@ -58,7 +58,7 @@ public class RadioMenuItem
     /// <param name="label">The display label.</param>
     /// <param name="onSelected">Callback fired when the player confirms this item.</param>
     /// <param name="description">Optional description shown when highlighted.</param>
-    public RadioMenuItem(string label, Action<Player, RadioMenuItem> onSelected, string? description = null)
+    public RadioMenuItem(string label, Action<Player, RadioMenuItem>? onSelected, string? description = null)
     {
         Label = label;
         OnSelected = onSelected;

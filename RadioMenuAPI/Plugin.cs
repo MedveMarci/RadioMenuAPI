@@ -7,7 +7,7 @@ namespace RadioMenuAPI;
 
 public class RadioMenuAPI : Plugin
 {
-    private RadioMenuEventHandler _eventHandler;
+    private RadioMenuEventHandler? _eventHandler;
     public override string Name => "RadioMenuAPI";
     public override string Description => "API for creating custom radio menus.";
     public override string Author => "MedveMarci";
@@ -22,7 +22,8 @@ public class RadioMenuAPI : Plugin
 
     public override void Disable()
     {
-        CustomHandlersManager.UnregisterEventsHandler(_eventHandler);
+        if (_eventHandler != null)
+            CustomHandlersManager.UnregisterEventsHandler(_eventHandler);
         _eventHandler = null;
         RadioMenuManager.ClearAll();
     }

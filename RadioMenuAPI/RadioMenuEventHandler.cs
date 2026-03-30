@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using LabApi.Events.Arguments.PlayerEvents;
 using LabApi.Events.CustomHandlers;
 using LabApi.Features.Console;
 using LabApi.Features.Wrappers;
+using MEC;
 using RadioMenuAPI.Events;
 
 namespace RadioMenuAPI;
@@ -39,6 +41,10 @@ internal class RadioMenuEventHandler : CustomEventsHandler
 
             RadioMenuEvents.InvokeMenuOpened(new MenuOpenedEventArgs(ev.Player, newMenu));
             ShowMenuHint(ev.Player, newMenu, 0);
+
+            if (RadioMenuManager.PlayerHintCoroutines.TryGetValue(playerId, out var oldCoroutine))
+                Timing.KillCoroutines(oldCoroutine);
+            RadioMenuManager.PlayerHintCoroutines[playerId] = Timing.RunCoroutine(HintRefreshCoroutine(ev.Player, playerId, newMenu));
         }
 
         base.OnPlayerChangingItem(ev);
@@ -55,7 +61,11 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         if (menu.SuppressDefaultBehavior)
             ev.IsAllowed = false;
 
-        if (menu.Items.Count == 0) return;
+        if (menu.Items.Count == 0)
+        {
+            base.OnPlayerChangingRadioRange(ev);
+            return;
+        }
 
         var playerId = ev.Player.ReferenceHub.GetInstanceID();
         RadioMenuManager.PlayerSelections.TryGetValue(playerId, out var previousIndex);
@@ -69,6 +79,7 @@ internal class RadioMenuEventHandler : CustomEventsHandler
             menu.Items[newIndex], newIndex));
 
         ShowMenuHint(ev.Player, menu, newIndex);
+        base.OnPlayerChangingRadioRange(ev);
     }
 
     public override void OnPlayerTogglingRadio(PlayerTogglingRadioEventArgs ev)
@@ -82,16 +93,27 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         if (menu.SuppressDefaultBehavior)
             ev.IsAllowed = false;
 
-        if (menu.Items.Count == 0) return;
+        if (menu.Items.Count == 0)
+        {
+            base.OnPlayerTogglingRadio(ev);
+            return;
+        }
 
         var playerId = ev.Player.ReferenceHub.GetInstanceID();
         if (!RadioMenuManager.PlayerSelections.TryGetValue(playerId, out var idx))
+        {
+            base.OnPlayerTogglingRadio(ev);
             return;
+        }
 
         var selectedIndex = idx % menu.Items.Count;
         var item = menu.Items[selectedIndex];
 
-        if (!item.Enabled) return;
+        if (!item.Enabled)
+        {
+            base.OnPlayerTogglingRadio(ev);
+            return;
+        }
 
         try
         {
@@ -103,6 +125,7 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         }
 
         RadioMenuEvents.InvokeItemSelected(new MenuItemSelectedEventArgs(ev.Player, menu, item, selectedIndex));
+        base.OnPlayerTogglingRadio(ev);
     }
 
     public override void OnPlayerUsingRadio(PlayerUsingRadioEventArgs ev)
@@ -115,6 +138,7 @@ internal class RadioMenuEventHandler : CustomEventsHandler
 
         if (menu.SuppressDefaultBehavior)
             ev.IsAllowed = false;
+        base.OnPlayerUsingRadio(ev);
     }
 
     public override void OnPlayerLeft(PlayerLeftEventArgs ev)
@@ -129,6 +153,19 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         base.OnServerRoundRestarted();
     }
 
+    private static IEnumerator<float> HintRefreshCoroutine(Player player, int playerId, RadioMenu menu)
+    {
+        while (RadioMenuManager.PlayerActiveRadio.ContainsKey(playerId))
+        {
+            yield return Timing.WaitForSeconds(menu.HintDuration);
+            if (!RadioMenuManager.PlayerActiveRadio.ContainsKey(playerId)) break;
+            if (RadioMenuManager.PlayerSelections.TryGetValue(playerId, out var idx))
+                ShowMenuHint(player, menu, idx);
+        }
+
+        RadioMenuManager.PlayerHintCoroutines.Remove(playerId);
+    }
+
     internal static void ShowMenuHint(Player player, RadioMenu menu, int selectedIndex)
     {
         if (menu.Items.Count == 0) return;
@@ -140,6 +177,7 @@ internal class RadioMenuEventHandler : CustomEventsHandler
 
         sb.AppendLine();
 
+        string? description = null;
         for (var i = 0; i < menu.Items.Count; i++)
         {
             var item = menu.Items[i];
@@ -153,10 +191,12 @@ internal class RadioMenuEventHandler : CustomEventsHandler
             sb.AppendLine("</color>");
 
             if (isSelected && !string.IsNullOrEmpty(item.Description))
-                sb.AppendLine($"<color=#AAAAAA><size=20>   {item.Description}</size></color>");
+                description = item.Description;
         }
 
         sb.AppendLine();
+        if (description != null)
+            sb.AppendLine($"<color=#AAAAAA><size=20>{description}</size></color>");
         sb.AppendLine("<color=#888888><size=18>Range = Next | Toggle = Select</size></color>");
 
         player.SendHint(sb.ToString(), menu.HintDuration);

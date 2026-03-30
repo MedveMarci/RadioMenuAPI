@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using LabApi.Features.Wrappers;
+using MEC;
 
 namespace RadioMenuAPI;
 
@@ -12,6 +13,7 @@ public static class RadioMenuManager
     internal static Dictionary<ushort, RadioMenu> MenusBySerial { get; } = new();
     internal static Dictionary<int, int> PlayerSelections { get; } = new();
     internal static Dictionary<int, ushort> PlayerActiveRadio { get; } = new();
+    internal static Dictionary<int, CoroutineHandle> PlayerHintCoroutines { get; } = new();
 
     /// <summary>Assigns a <see cref="RadioMenu"/> to a radio item by serial number.</summary>
     /// <param name="radioSerial">The serial number of the radio item.</param>
@@ -115,6 +117,9 @@ public static class RadioMenuManager
         MenusBySerial.Clear();
         PlayerSelections.Clear();
         PlayerActiveRadio.Clear();
+        foreach (var handle in PlayerHintCoroutines.Values)
+            Timing.KillCoroutines(handle);
+        PlayerHintCoroutines.Clear();
     }
 
     /// <summary>Removes all state for a specific player. Called automatically on disconnect.</summary>
@@ -123,6 +128,10 @@ public static class RadioMenuManager
         var id = player.ReferenceHub.GetInstanceID();
         PlayerSelections.Remove(id);
         PlayerActiveRadio.Remove(id);
+        if (!PlayerHintCoroutines.TryGetValue(id, out var handle))
+            return;
+        Timing.KillCoroutines(handle);
+        PlayerHintCoroutines.Remove(id);
     }
 
     /// <summary>
@@ -148,6 +157,13 @@ public static class RadioMenuManager
 
         PlayerActiveRadio.Remove(id);
         PlayerSelections.Remove(id);
+
+        if (PlayerHintCoroutines.TryGetValue(id, out var handle))
+        {
+            Timing.KillCoroutines(handle);
+            PlayerHintCoroutines.Remove(id);
+        }
+
         player.SendHint("", 0.1f);
     }
     

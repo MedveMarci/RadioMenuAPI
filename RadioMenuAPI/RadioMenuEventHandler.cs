@@ -141,6 +141,12 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         base.OnPlayerUsingRadio(ev);
     }
 
+    public override void OnPlayerChangedRole(PlayerChangedRoleEventArgs ev)
+    {
+        RadioMenuManager.CleanupPlayer(ev.Player);
+        base.OnPlayerChangedRole(ev);
+    }
+
     public override void OnPlayerLeft(PlayerLeftEventArgs ev)
     {
         RadioMenuManager.CleanupPlayer(ev.Player);

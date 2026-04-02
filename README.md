@@ -2,7 +2,9 @@
 
 [![Version](https://img.shields.io/github/v/release/MedveMarci/RadioMenuAPI?&label=Version&color=d500ff)](https://github.com/MedveMarci/RadioMenuAPI/releases/latest) [![LabAPI Version](https://img.shields.io/badge/LabAPI_Version-1.1.6-b84ee87)](https://github.com/northwood-studios/LabAPI/releases/tag/1.1.6) [![SCP:SL Version](https://img.shields.io/badge/SCP:SL_Version-14.2.6-blue?&color=e5b200)](https://store.steampowered.com/app/700330/SCP_Secret_Laboratory/) [![Total Downloads](https://img.shields.io/github/downloads/MedveMarci/RadioMenuAPI/total.svg?label=Total%20Downloads&color=&color=ffbf00)]()<br>
 
-A [LabAPI](https://github.com/northwood-studios/LabAPI) plugin for [SCP: Secret Laboratory](https://store.steampowered.com/app/700330/SCP_Secret_Laboratory/) that provides an API for creating interactive radio-based menus for players.
+A [LabAPI](https://github.com/northwood-studios/LabAPI) plugin
+for [SCP: Secret Laboratory](https://store.steampowered.com/app/700330/SCP_Secret_Laboratory/) that provides an API for
+creating interactive radio-based menus for players.
 
 ---
 
@@ -10,12 +12,12 @@ A [LabAPI](https://github.com/northwood-studios/LabAPI) plugin for [SCP: Secret 
 
 RadioMenuAPI hooks into three existing radio events and repurposes them as menu navigation controls:
 
-| Player action | Menu action |
-|---|---|
-| Equip the radio | Open the menu |
-| Press **Range** | Cycle to the next item |
+| Player action             | Menu action               |
+|---------------------------|---------------------------|
+| Equip the radio           | Open the menu             |
+| Press **Range**           | Cycle to the next item    |
 | Press **Toggle** (on/off) | Confirm the selected item |
-| Unequip the radio | Close the menu |
+| Unequip the radio         | Close the menu            |
 
 The current selection and the full item list are shown to the player as an on-screen hint that updates with each press.
 
@@ -27,13 +29,15 @@ The current selection and the full item list are shown to the player as an on-sc
 2. Place it in your server's `LabAPI/plugins/global` folder.
 3. Restart the server.
 
-Other plugins that depend on RadioMenuAPI must also be placed in the plugins folder. RadioMenuAPI must load before them (it loads alphabetically by filename).
+Other plugins that depend on RadioMenuAPI must also be placed in the plugins folder. RadioMenuAPI must load before
+them (it loads alphabetically by filename).
 
 ---
 
 ## Usage for Developers
 
-Add a reference `RadioMenuAPI.dll` in your project or you can download the NuGet package from [NuGet.org](https://www.nuget.org/packages/RadioMenuAPI/).
+Add a reference `RadioMenuAPI.dll` in your project or you can download the NuGet package
+from [NuGet.org](https://www.nuget.org/packages/RadioMenuAPI/).
 
 ### Quick start — give a player a radio menu
 
@@ -135,7 +139,8 @@ void OnItemSelected(MenuItemSelectedEventArgs ev)
 
 ### Player-scoped event subscriptions
 
-Use the extension methods on `Player` to subscribe to events for a **specific player only**. The returned delegate must be kept to unsubscribe later.
+Use the extension methods on `Player` to subscribe to events for a **specific player only**. The returned delegate must
+be kept to unsubscribe later.
 
 ```csharp
 using RadioMenuAPI.Extensions;
@@ -152,11 +157,11 @@ player.UnsubscribeItemSelected(handler);
 
 All four player-scoped methods follow the same pattern:
 
-| Subscribe | Unsubscribe |
-|---|---|
-| `player.SubscribeMenuOpened(handler)` | `player.UnsubscribeMenuOpened(handler)` |
-| `player.SubscribeMenuClosed(handler)` | `player.UnsubscribeMenuClosed(handler)` |
-| `player.SubscribeItemChanged(handler)` | `player.UnsubscribeItemChanged(handler)` |
+| Subscribe                               | Unsubscribe                               |
+|-----------------------------------------|-------------------------------------------|
+| `player.SubscribeMenuOpened(handler)`   | `player.UnsubscribeMenuOpened(handler)`   |
+| `player.SubscribeMenuClosed(handler)`   | `player.UnsubscribeMenuClosed(handler)`   |
+| `player.SubscribeItemChanged(handler)`  | `player.UnsubscribeItemChanged(handler)`  |
 | `player.SubscribeItemSelected(handler)` | `player.UnsubscribeItemSelected(handler)` |
 
 ### Disable individual items at runtime
@@ -201,24 +206,24 @@ RadioMenuManager.ClearAll();
 
 ## RadioMenu options
 
-| Property | Type | Default | Description |
-|---|---|---|---|
-| `Title` | `string?` | `null` | Header shown above the item list |
-| `Tag` | `string?` | `null` | Optional tag for identifying/grouping menus (see `RadioMenuManager.GetMenusByTag`) |
-| `Items` | `List<RadioMenuItem>` | `[]` | The selectable items |
-| `OnOpened` | `Action<Player, RadioMenu>?` | `null` | Fired when the player equips this radio |
-| `OnClosed` | `Action<Player, RadioMenu>?` | `null` | Fired when the player unequips this radio |
-| `SuppressDefaultBehavior` | `bool` | `true` | Suppresses battery drain and radio sounds |
-| `HintDuration` | `float` | `1` | How long (seconds) the hint stays visible after each input |
+| Property                  | Type                         | Default | Description                                                                        |
+|---------------------------|------------------------------|---------|------------------------------------------------------------------------------------|
+| `Title`                   | `string?`                    | `null`  | Header shown above the item list                                                   |
+| `Tag`                     | `string?`                    | `null`  | Optional tag for identifying/grouping menus (see `RadioMenuManager.GetMenusByTag`) |
+| `Items`                   | `List<RadioMenuItem>`        | `[]`    | The selectable items                                                               |
+| `OnOpened`                | `Action<Player, RadioMenu>?` | `null`  | Fired when the player equips this radio                                            |
+| `OnClosed`                | `Action<Player, RadioMenu>?` | `null`  | Fired when the player unequips this radio                                          |
+| `SuppressDefaultBehavior` | `bool`                       | `true`  | Suppresses battery drain and radio sounds                                          |
+| `HintDuration`            | `float`                      | `1`     | How long (seconds) the hint stays visible after each input                         |
 
 ## RadioMenuItem options
 
-| Property | Type | Default | Description |
-|---|---|---|---|
-| `Label` | `string?` | `null` | The item name shown in the list |
-| `Description` | `string?` | `null` | Extra line shown below the label when this item is highlighted |
-| `Enabled` | `bool` | `true` | Whether the item can be selected. Setting to `false` auto-moves players to the next enabled item |
-| `OnSelected` | `Action<Player, RadioMenuItem>?` | `null` | Fired when the player confirms this item. Optional — subscribe to `RadioMenuEvents.ItemSelected` instead if preferred |
+| Property      | Type                             | Default | Description                                                                                                           |
+|---------------|----------------------------------|---------|-----------------------------------------------------------------------------------------------------------------------|
+| `Label`       | `string?`                        | `null`  | The item name shown in the list                                                                                       |
+| `Description` | `string?`                        | `null`  | Extra line shown below the label when this item is highlighted                                                        |
+| `Enabled`     | `bool`                           | `true`  | Whether the item can be selected. Setting to `false` auto-moves players to the next enabled item                      |
+| `OnSelected`  | `Action<Player, RadioMenuItem>?` | `null`  | Fired when the player confirms this item. Optional — subscribe to `RadioMenuEvents.ItemSelected` instead if preferred |
 
 ---
 
@@ -252,4 +257,5 @@ public class MyEventHandler : CustomEventsHandler
 ---
 
 ## Credits
+
 - Created by [MedveMarci](https://github.com/MedveMarci)

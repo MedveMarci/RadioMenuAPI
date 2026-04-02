@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using LabApi.Events.Arguments.PlayerEvents;
 using LabApi.Events.CustomHandlers;
 using LabApi.Features.Console;
 using LabApi.Features.Wrappers;
+using MEC;
 using RadioMenuAPI.Events;
 
 namespace RadioMenuAPI;
@@ -17,16 +19,14 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         if (ev.OldItem is { Type: ItemType.Radio } &&
             RadioMenuManager.PlayerActiveRadio.TryGetValue(playerId, out var oldSerial) &&
             oldSerial == ev.OldItem.Serial)
-        {
-            // CloseRadioMenu handles OnClosed, MenuClosed event, state cleanup, and hint clear
             RadioMenuManager.CloseRadioMenu(ev.Player);
-        }
 
         if (ev.NewItem is { Type: ItemType.Radio } &&
             RadioMenuManager.MenusBySerial.TryGetValue(ev.NewItem.Serial, out var newMenu))
         {
             RadioMenuManager.PlayerActiveRadio[playerId] = ev.NewItem.Serial;
             RadioMenuManager.PlayerSelections[playerId] = 0;
+            RadioMenuManager.PlayerLockedSelections.Remove(playerId);
 
             try
             {
@@ -39,6 +39,11 @@ internal class RadioMenuEventHandler : CustomEventsHandler
 
             RadioMenuEvents.InvokeMenuOpened(new MenuOpenedEventArgs(ev.Player, newMenu));
             ShowMenuHint(ev.Player, newMenu, 0);
+
+            if (RadioMenuManager.PlayerHintCoroutines.TryGetValue(playerId, out var oldCoroutine))
+                Timing.KillCoroutines(oldCoroutine);
+            RadioMenuManager.PlayerHintCoroutines[playerId] =
+                Timing.RunCoroutine(HintRefreshCoroutine(ev.Player, playerId, newMenu));
         }
 
         base.OnPlayerChangingItem(ev);
@@ -55,9 +60,21 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         if (menu.SuppressDefaultBehavior)
             ev.IsAllowed = false;
 
-        if (menu.Items.Count == 0) return;
+        if (menu.Items.Count == 0)
+        {
+            base.OnPlayerChangingRadioRange(ev);
+            return;
+        }
 
         var playerId = ev.Player.ReferenceHub.GetInstanceID();
+
+        // Block navigation while an item is locked
+        if (menu.LockOnSelect && RadioMenuManager.PlayerLockedSelections.ContainsKey(playerId))
+        {
+            base.OnPlayerChangingRadioRange(ev);
+            return;
+        }
+
         RadioMenuManager.PlayerSelections.TryGetValue(playerId, out var previousIndex);
 
         var newIndex = (previousIndex + 1) % menu.Items.Count;
@@ -69,6 +86,7 @@ internal class RadioMenuEventHandler : CustomEventsHandler
             menu.Items[newIndex], newIndex));
 
         ShowMenuHint(ev.Player, menu, newIndex);
+        base.OnPlayerChangingRadioRange(ev);
     }
 
     public override void OnPlayerTogglingRadio(PlayerTogglingRadioEventArgs ev)
@@ -82,16 +100,50 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         if (menu.SuppressDefaultBehavior)
             ev.IsAllowed = false;
 
-        if (menu.Items.Count == 0) return;
+        if (menu.Items.Count == 0)
+        {
+            base.OnPlayerTogglingRadio(ev);
+            return;
+        }
 
         var playerId = ev.Player.ReferenceHub.GetInstanceID();
         if (!RadioMenuManager.PlayerSelections.TryGetValue(playerId, out var idx))
+        {
+            base.OnPlayerTogglingRadio(ev);
             return;
+        }
 
         var selectedIndex = idx % menu.Items.Count;
         var item = menu.Items[selectedIndex];
 
-        if (!item.Enabled) return;
+        if (!item.Enabled)
+        {
+            base.OnPlayerTogglingRadio(ev);
+            return;
+        }
+
+        if (menu.LockOnSelect)
+        {
+            if (RadioMenuManager.PlayerLockedSelections.TryGetValue(playerId, out var lockedIdx) &&
+                lockedIdx == selectedIndex)
+            {
+                RadioMenuManager.PlayerLockedSelections.Remove(playerId);
+                try
+                {
+                    item.OnDeselected?.Invoke(ev.Player, item);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"[RadioMenuAPI] OnDeselected error: {ex}");
+                }
+
+                ShowMenuHint(ev.Player, menu, selectedIndex);
+                base.OnPlayerTogglingRadio(ev);
+                return;
+            }
+
+            RadioMenuManager.PlayerLockedSelections[playerId] = selectedIndex;
+        }
 
         try
         {
@@ -103,6 +155,8 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         }
 
         RadioMenuEvents.InvokeItemSelected(new MenuItemSelectedEventArgs(ev.Player, menu, item, selectedIndex));
+        ShowMenuHint(ev.Player, menu, selectedIndex);
+        base.OnPlayerTogglingRadio(ev);
     }
 
     public override void OnPlayerUsingRadio(PlayerUsingRadioEventArgs ev)
@@ -115,6 +169,29 @@ internal class RadioMenuEventHandler : CustomEventsHandler
 
         if (menu.SuppressDefaultBehavior)
             ev.IsAllowed = false;
+        base.OnPlayerUsingRadio(ev);
+    }
+
+    public override void OnPlayerDroppingItem(PlayerDroppingItemEventArgs ev)
+    {
+        if (ev.Item is not { Type: ItemType.Radio })
+        {
+            base.OnPlayerDroppingItem(ev);
+            return;
+        }
+
+        var playerId = ev.Player.ReferenceHub.GetInstanceID();
+        if (RadioMenuManager.PlayerActiveRadio.TryGetValue(playerId, out var serial) &&
+            serial == ev.Item.Serial)
+            RadioMenuManager.CloseRadioMenu(ev.Player);
+
+        base.OnPlayerDroppingItem(ev);
+    }
+
+    public override void OnPlayerChangedRole(PlayerChangedRoleEventArgs ev)
+    {
+        RadioMenuManager.CleanupPlayer(ev.Player);
+        base.OnPlayerChangedRole(ev);
     }
 
     public override void OnPlayerLeft(PlayerLeftEventArgs ev)
@@ -129,9 +206,26 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         base.OnServerRoundRestarted();
     }
 
+    private static IEnumerator<float> HintRefreshCoroutine(Player player, int playerId, RadioMenu menu)
+    {
+        while (RadioMenuManager.PlayerActiveRadio.ContainsKey(playerId))
+        {
+            yield return Timing.WaitForSeconds(menu.HintDuration);
+            if (!RadioMenuManager.PlayerActiveRadio.ContainsKey(playerId)) break;
+            if (RadioMenuManager.PlayerSelections.TryGetValue(playerId, out var idx))
+                ShowMenuHint(player, menu, idx);
+        }
+
+        RadioMenuManager.PlayerHintCoroutines.Remove(playerId);
+    }
+
     internal static void ShowMenuHint(Player player, RadioMenu menu, int selectedIndex)
     {
         if (menu.Items.Count == 0) return;
+
+        var playerId = player.ReferenceHub.GetInstanceID();
+        RadioMenuManager.PlayerLockedSelections.TryGetValue(playerId, out var lockedIdx);
+        var hasLock = menu.LockOnSelect && RadioMenuManager.PlayerLockedSelections.ContainsKey(playerId);
 
         var sb = new StringBuilder();
 
@@ -140,12 +234,44 @@ internal class RadioMenuEventHandler : CustomEventsHandler
 
         sb.AppendLine();
 
+        if (menu.DisplayMode == MenuDisplayMode.Pager)
+            ShowPagerHint(sb, menu, selectedIndex, hasLock, lockedIdx);
+        else
+            ShowListHint(sb, menu, selectedIndex, hasLock, lockedIdx);
+
+        player.SendHint(sb.ToString(), menu.HintDuration);
+    }
+
+    private static void ShowListHint(StringBuilder sb, RadioMenu menu, int selectedIndex, bool hasLock, int lockedIdx)
+    {
+        string? description = null;
         for (var i = 0; i < menu.Items.Count; i++)
         {
             var item = menu.Items[i];
             var isSelected = i == selectedIndex;
-            var color = !item.Enabled ? "#666666" : isSelected ? "#FFFF00" : "#FFFFFF";
-            var prefix = isSelected ? "► " : "   ";
+            var isLocked = hasLock && i == lockedIdx;
+
+            string color, prefix;
+            if (!item.Enabled)
+            {
+                color = "#666666";
+                prefix = "   ";
+            }
+            else if (isLocked)
+            {
+                color = "#00FF88";
+                prefix = "✓ ";
+            }
+            else if (isSelected)
+            {
+                color = "#FFFF00";
+                prefix = "► ";
+            }
+            else
+            {
+                color = "#FFFFFF";
+                prefix = "   ";
+            }
 
             sb.Append($"<color={color}>{prefix}{item.Label}");
             if (!item.Enabled)
@@ -153,12 +279,44 @@ internal class RadioMenuEventHandler : CustomEventsHandler
             sb.AppendLine("</color>");
 
             if (isSelected && !string.IsNullOrEmpty(item.Description))
-                sb.AppendLine($"<color=#AAAAAA><size=20>   {item.Description}</size></color>");
+                description = item.Description;
         }
 
         sb.AppendLine();
-        sb.AppendLine("<color=#888888><size=18>Range = Next | Toggle = Select</size></color>");
+        if (description != null)
+            sb.AppendLine($"<color=#AAAAAA><size=20>{description}</size></color>");
 
-        player.SendHint(sb.ToString(), menu.HintDuration);
+        var toggleHint = hasLock ? "Toggle = Unlock" : "Toggle = Select";
+        sb.AppendLine($"<color=#888888><size=18>Range = Next | {toggleHint}</size></color>");
+    }
+
+    private static void ShowPagerHint(StringBuilder sb, RadioMenu menu, int selectedIndex, bool hasLock, int lockedIdx)
+    {
+        var item = menu.Items[selectedIndex];
+        var isLocked = hasLock && selectedIndex == lockedIdx;
+
+        string color;
+        if (!item.Enabled)
+            color = "#666666";
+        else if (isLocked)
+            color = "#00FF88";
+        else
+            color = "#FFFF00";
+
+        var lockIndicator = isLocked ? " ✓" : "";
+        sb.AppendLine($"<color={color}><size=26>◄  {item.Label}{lockIndicator}  ►</size></color>");
+
+        sb.AppendLine();
+        if (!string.IsNullOrEmpty(item.Description))
+            sb.AppendLine($"<color=#AAAAAA><size=20>{item.Description}</size></color>");
+
+        if (!item.Enabled)
+            sb.AppendLine("<color=#666666><size=18>[disabled]</size></color>");
+
+        sb.AppendLine();
+        sb.AppendLine($"<color=#888888><size=16>{selectedIndex + 1} / {menu.Items.Count}</size></color>");
+
+        var toggleHint = hasLock ? "Toggle = Unlock" : "Toggle = Select";
+        sb.AppendLine($"<color=#888888><size=18>Range = Next | {toggleHint}</size></color>");
     }
 }

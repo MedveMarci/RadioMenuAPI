@@ -7,7 +7,7 @@ public static class ReferenceHubExtensions
     /// <summary>Gives the player a radio and assigns a new menu to it.</summary>
     /// <param name="hub">The reference hub of the player.</param>
     /// <param name="title">Optional title displayed as the menu header.</param>
-    /// <returns>The created <see cref="RadioMenu"/>, or <c>null</c> if the radio could not be added.</returns>
+    /// <returns>The created <see cref="RadioMenu" />, or <c>null</c> if the radio could not be added.</returns>
     public static RadioMenu? GiveRadioMenu(this ReferenceHub hub, string? title = null)
     {
         var player = Player.Get(hub);
@@ -24,7 +24,7 @@ public static class ReferenceHubExtensions
         return player != null && RadioMenuManager.GiveRadioMenu(player, menu);
     }
 
-    /// <summary>Gets the <see cref="RadioMenu"/> the player currently has open, or <c>null</c>.</summary>
+    /// <summary>Gets the <see cref="RadioMenu" /> the player currently has open, or <c>null</c>.</summary>
     /// <param name="hub">The reference hub of the player.</param>
     public static RadioMenu? GetActiveRadioMenu(this ReferenceHub hub)
     {
@@ -34,7 +34,7 @@ public static class ReferenceHubExtensions
         return menu;
     }
 
-    /// <summary>Gets the currently highlighted <see cref="RadioMenuItem"/>, or <c>null</c>.</summary>
+    /// <summary>Gets the currently highlighted <see cref="RadioMenuItem" />, or <c>null</c>.</summary>
     /// <param name="hub">The reference hub of the player.</param>
     public static RadioMenuItem? GetSelectedRadioMenuItem(this ReferenceHub hub)
     {
@@ -53,10 +53,12 @@ public static class ReferenceHubExtensions
     /// <summary>Returns <c>true</c> if the player currently has a radio menu open.</summary>
     /// <param name="hub">The reference hub of the player.</param>
     public static bool HasActiveRadioMenu(this ReferenceHub hub)
-        => RadioMenuManager.PlayerActiveRadio.ContainsKey(hub.GetInstanceID());
+    {
+        return RadioMenuManager.PlayerActiveRadio.ContainsKey(hub.GetInstanceID());
+    }
 
     /// <summary>
-    ///     Closes the player's active radio menu, fires <see cref="RadioMenu.OnClosed"/>, and clears the hint.
+    ///     Closes the player's active radio menu, fires <see cref="RadioMenu.OnClosed" />, and clears the hint.
     ///     Does not remove the radio item from inventory.
     /// </summary>
     /// <param name="hub">The reference hub of the player.</param>

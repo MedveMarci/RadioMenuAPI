@@ -1,21 +1,22 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using LabApi.Features.Console;
 using LabApi.Features.Wrappers;
 using MEC;
+using RadioMenuAPI.Events;
 
 namespace RadioMenuAPI;
 
-/// <summary>
-///     Central static API for creating, assigning, and managing radio menus.
-/// </summary>
 public static class RadioMenuManager
 {
     internal static Dictionary<ushort, RadioMenu> MenusBySerial { get; } = new();
     internal static Dictionary<int, int> PlayerSelections { get; } = new();
+    internal static Dictionary<int, int> PlayerLockedSelections { get; } = new();
     internal static Dictionary<int, ushort> PlayerActiveRadio { get; } = new();
     internal static Dictionary<int, CoroutineHandle> PlayerHintCoroutines { get; } = new();
 
-    /// <summary>Assigns a <see cref="RadioMenu"/> to a radio item by serial number.</summary>
+    /// <summary>Assigns a <see cref="RadioMenu" /> to a radio item by serial number.</summary>
     /// <param name="radioSerial">The serial number of the radio item.</param>
     /// <param name="menu">The menu to assign.</param>
     public static void AssignMenu(ushort radioSerial, RadioMenu menu)
@@ -23,10 +24,34 @@ public static class RadioMenuManager
         MenusBySerial[radioSerial] = menu;
     }
 
-    /// <summary>Removes the menu assigned to the given radio serial.</summary>
+    /// <summary>Removes the menu assigned to the given radio serial and closes it for any player currently using it.</summary>
     /// <returns>True if a menu was removed.</returns>
     public static bool RemoveMenu(ushort radioSerial)
     {
+        if (!MenusBySerial.ContainsKey(radioSerial))
+            return false;
+
+        foreach (var entry in PlayerActiveRadio.Where(e => e.Value == radioSerial).ToList())
+        {
+            var player = Player.ReadyList.FirstOrDefault(p => p.ReferenceHub.GetInstanceID() == entry.Key);
+            if (player != null)
+            {
+                CloseRadioMenu(player);
+            }
+            else
+            {
+                var id = entry.Key;
+                PlayerActiveRadio.Remove(id);
+                PlayerSelections.Remove(id);
+                PlayerLockedSelections.Remove(id);
+                if (PlayerHintCoroutines.TryGetValue(id, out var handle))
+                {
+                    Timing.KillCoroutines(handle);
+                    PlayerHintCoroutines.Remove(id);
+                }
+            }
+        }
+
         return MenusBySerial.Remove(radioSerial);
     }
 
@@ -39,7 +64,7 @@ public static class RadioMenuManager
         return MenusBySerial.TryGetValue(radioSerial, out menu);
     }
 
-    /// <summary>Creates a new <see cref="RadioMenu"/>, assigns it to a radio item, and returns it.</summary>
+    /// <summary>Creates a new <see cref="RadioMenu" />, assigns it to a radio item, and returns it.</summary>
     /// <param name="radioSerial">The serial number of the radio item.</param>
     /// <param name="title">Optional display title shown as the menu header.</param>
     public static RadioMenu CreateMenu(ushort radioSerial, string? title = null)
@@ -54,7 +79,7 @@ public static class RadioMenuManager
     /// </summary>
     /// <param name="player">The player to give the radio to.</param>
     /// <param name="title">Optional display title shown as the menu header.</param>
-    /// <returns>The created <see cref="RadioMenu"/>, or <c>null</c> if the radio could not be added.</returns>
+    /// <returns>The created <see cref="RadioMenu" />, or <c>null</c> if the radio could not be added.</returns>
     public static RadioMenu? GiveRadioMenu(Player player, string? title = null)
     {
         var item = player.AddItem(ItemType.Radio);
@@ -80,13 +105,13 @@ public static class RadioMenuManager
         return true;
     }
 
-    /// <summary>Returns all menus that have the given <see cref="RadioMenu.Tag"/>.</summary>
+    /// <summary>Returns all menus that have the given <see cref="RadioMenu.Tag" />.</summary>
     public static IReadOnlyList<RadioMenu> GetMenusByTag(string tag)
     {
         return MenusBySerial.Values.Where(m => m.Tag == tag).ToList();
     }
 
-    /// <summary>Gets the first menu with the given <see cref="RadioMenu.Tag"/>.</summary>
+    /// <summary>Gets the first menu with the given <see cref="RadioMenu.Tag" />.</summary>
     /// <returns>True if a matching menu was found.</returns>
     public static bool TryGetMenuByTag(string tag, out RadioMenu? menu)
     {
@@ -100,7 +125,29 @@ public static class RadioMenuManager
         return PlayerSelections.TryGetValue(player.ReferenceHub.GetInstanceID(), out var idx) ? idx : -1;
     }
 
-    /// <summary>Gets the currently highlighted <see cref="RadioMenuItem"/> for a player, or <c>null</c>.</summary>
+    /// <summary>
+    ///     Returns the index of the item the player has locked via <see cref="RadioMenu.LockOnSelect" />,
+    ///     or -1 if nothing is locked.
+    /// </summary>
+    public static int GetLockedIndex(Player player)
+    {
+        return PlayerLockedSelections.TryGetValue(player.ReferenceHub.GetInstanceID(), out var idx) ? idx : -1;
+    }
+
+    /// <summary>
+    ///     Returns the locked <see cref="RadioMenuItem" /> for a player, or <c>null</c> if nothing is locked.
+    /// </summary>
+    public static RadioMenuItem? GetLockedItem(Player player)
+    {
+        var id = player.ReferenceHub.GetInstanceID();
+        if (!PlayerLockedSelections.TryGetValue(id, out var lockedIdx)) return null;
+        if (!PlayerActiveRadio.TryGetValue(id, out var serial)) return null;
+        if (!MenusBySerial.TryGetValue(serial, out var menu)) return null;
+        if (lockedIdx < 0 || lockedIdx >= menu.Items.Count) return null;
+        return menu.Items[lockedIdx];
+    }
+
+    /// <summary>Gets the currently highlighted <see cref="RadioMenuItem" /> for a player, or <c>null</c>.</summary>
     public static RadioMenuItem? GetSelectedItem(Player player)
     {
         var id = player.ReferenceHub.GetInstanceID();
@@ -116,6 +163,7 @@ public static class RadioMenuManager
     {
         MenusBySerial.Clear();
         PlayerSelections.Clear();
+        PlayerLockedSelections.Clear();
         PlayerActiveRadio.Clear();
         foreach (var handle in PlayerHintCoroutines.Values)
             Timing.KillCoroutines(handle);
@@ -127,6 +175,7 @@ public static class RadioMenuManager
     {
         var id = player.ReferenceHub.GetInstanceID();
         PlayerSelections.Remove(id);
+        PlayerLockedSelections.Remove(id);
         PlayerActiveRadio.Remove(id);
         if (!PlayerHintCoroutines.TryGetValue(id, out var handle))
             return;
@@ -135,7 +184,7 @@ public static class RadioMenuManager
     }
 
     /// <summary>
-    ///     Closes the active radio menu for a player: fires <see cref="RadioMenu.OnClosed"/>,
+    ///     Closes the active radio menu for a player: fires <see cref="RadioMenu.OnClosed" />,
     ///     clears internal state, and clears the on-screen hint.
     ///     Does not remove the radio item from the player's inventory.
     /// </summary>
@@ -146,17 +195,21 @@ public static class RadioMenuManager
         if (PlayerActiveRadio.TryGetValue(id, out var serial) &&
             MenusBySerial.TryGetValue(serial, out var menu))
         {
-            try { menu.OnClosed?.Invoke(player, menu); }
-            catch (System.Exception ex)
+            try
             {
-                LabApi.Features.Console.Logger.Error($"[RadioMenuAPI] OnClosed error: {ex}");
+                menu.OnClosed?.Invoke(player, menu);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[RadioMenuAPI] OnClosed error: {ex}");
             }
 
-            Events.RadioMenuEvents.InvokeMenuClosed(new Events.MenuClosedEventArgs(player, menu));
+            RadioMenuEvents.InvokeMenuClosed(new MenuClosedEventArgs(player, menu));
         }
 
         PlayerActiveRadio.Remove(id);
         PlayerSelections.Remove(id);
+        PlayerLockedSelections.Remove(id);
 
         if (PlayerHintCoroutines.TryGetValue(id, out var handle))
         {
@@ -166,7 +219,7 @@ public static class RadioMenuManager
 
         player.SendHint("", 0.1f);
     }
-    
+
     internal static void BumpPlayersOffItem(RadioMenuItem disabledItem)
     {
         foreach (var entry in PlayerActiveRadio)
@@ -185,7 +238,7 @@ public static class RadioMenuManager
                 RadioMenuEventHandler.ShowMenuHint(player, menu, next);
         }
     }
-    
+
     private static int FindNextEnabled(RadioMenu menu, int startIndex)
     {
         var count = menu.Items.Count;
@@ -195,6 +248,7 @@ public static class RadioMenuManager
             if (menu.Items[candidate].Enabled)
                 return candidate;
         }
+
         return startIndex;
     }
 

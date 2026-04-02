@@ -4,10 +4,6 @@ using LabApi.Features.Wrappers;
 
 namespace RadioMenuAPI;
 
-/// <summary>
-///     Represents a radio menu bound to a specific radio item (by serial).
-///     Players cycle items with radio range, confirm with radio toggle.
-/// </summary>
 public class RadioMenu
 {
     /// <summary>
@@ -16,7 +12,8 @@ public class RadioMenu
     public string? Title { get; set; }
 
     /// <summary>
-    ///     Optional tag for identifying or grouping menus. Use with <see cref="RadioMenuManager.GetMenusByTag"/> or <see cref="RadioMenuManager.TryGetMenuByTag"/>.
+    ///     Optional tag for identifying or grouping menus. Use with <see cref="RadioMenuManager.GetMenusByTag" /> or
+    ///     <see cref="RadioMenuManager.TryGetMenuByTag" />.
     /// </summary>
     public string? Tag { get; set; }
 
@@ -36,6 +33,20 @@ public class RadioMenu
     public Action<Player, RadioMenu>? OnClosed { get; set; }
 
     /// <summary>
+    ///     Controls how items are displayed. <see cref="MenuDisplayMode.List" /> shows all items at once;
+    ///     <see cref="MenuDisplayMode.Pager" /> shows one item at a time and cycles with Range.
+    ///     Default: <see cref="MenuDisplayMode.List" />.
+    /// </summary>
+    public MenuDisplayMode DisplayMode { get; set; } = MenuDisplayMode.List;
+
+    /// <summary>
+    ///     If true, confirming an item (Toggle) locks the selection: the player cannot navigate or
+    ///     select other items until they toggle the same item again to unlock it.
+    ///     Default: false.
+    /// </summary>
+    public bool LockOnSelect { get; set; } = false;
+
+    /// <summary>
     ///     If true, the default radio behavior (battery drain, sound) is suppressed.
     ///     Default: true.
     /// </summary>
@@ -49,7 +60,8 @@ public class RadioMenu
     /// <summary>
     ///     Adds a new item to the menu.
     /// </summary>
-    public RadioMenuItem AddItem(string label, Action<Player, RadioMenuItem>? onSelected = null, string? description = null)
+    public RadioMenuItem AddItem(string label, Action<Player, RadioMenuItem>? onSelected = null,
+        string? description = null)
     {
         var item = new RadioMenuItem(label, onSelected, description);
         Items.Add(item);

@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download SCP:SL References
+        uses: Axwabo/scpsl-references-downloader@v1
+        id: refs
+
+      - name: Extract version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag.TrimStart('v')
+          echo "VERSION=$version" >> $env:GITHUB_ENV
+
+      - name: Build & Pack
+        shell: pwsh
+        run: |
+          dotnet build RadioMenuAPI/RadioMenuAPI.csproj `
+            -c Release `
+            -p:Version=${{ env.VERSION }} `
+            -p:SL_REFERENCES="${{ steps.refs.outputs.target }}"
+
+      - name: Upload DLL to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: RadioMenuAPI/bin/x64/Release/RadioMenuAPI.dll
+
+      - name: Push to NuGet
+        shell: pwsh
+        run: |
+          dotnet nuget push "RadioMenuAPI/bin/x64/Release/*.nupkg" `
+            --api-key ${{ secrets.NUGET_API_KEY }} `
+            --source https://api.nuget.org/v3/index.json `
+            --skip-duplicate

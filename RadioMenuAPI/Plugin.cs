@@ -11,7 +11,7 @@ public class RadioMenuAPI : Plugin
     public override string Name => "RadioMenuAPI";
     public override string Description => "API for creating custom radio menus.";
     public override string Author => "MedveMarci";
-    public override Version Version { get; } = new(1, 0, 1);
+    public override Version Version { get; } = new(1, 1, 0);
     public override Version RequiredApiVersion { get; } = new(LabApiProperties.CompiledVersion);
 
     public override void Enable()

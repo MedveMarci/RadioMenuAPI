@@ -28,40 +28,39 @@ public static class RadioMenuEvents
 
     internal static void InvokeMenuOpened(MenuOpenedEventArgs ev)
     {
-        if (MenuOpened != null) 
+        if (MenuOpened != null)
             SafeInvoke(MenuOpened, ev, nameof(MenuOpened));
     }
 
     internal static void InvokeMenuClosed(MenuClosedEventArgs ev)
     {
-        if (MenuClosed != null) 
+        if (MenuClosed != null)
             SafeInvoke(MenuClosed, ev, nameof(MenuClosed));
     }
 
     internal static void InvokeItemChanged(MenuItemChangedEventArgs ev)
     {
-        if (ItemChanged != null) 
+        if (ItemChanged != null)
             SafeInvoke(ItemChanged, ev, nameof(ItemChanged));
     }
 
     internal static void InvokeItemSelected(MenuItemSelectedEventArgs ev)
     {
-        if (ItemSelected != null) 
+        if (ItemSelected != null)
             SafeInvoke(ItemSelected, ev, nameof(ItemSelected));
     }
 
     private static void SafeInvoke<T>(Action<T> action, T args, string eventName)
     {
         foreach (var handler in action.GetInvocationList())
-        {
             try
             {
                 ((Action<T>)handler)(args);
             }
             catch (Exception ex)
             {
-                Logger.Error($"[RadioMenuAPI] Exception in {eventName} handler '{handler.Method.DeclaringType?.Name}.{handler.Method.Name}': {ex}");
+                Logger.Error(
+                    $"[RadioMenuAPI] Exception in {eventName} handler '{handler.Method.DeclaringType?.Name}.{handler.Method.Name}': {ex}");
             }
-        }
     }
 }

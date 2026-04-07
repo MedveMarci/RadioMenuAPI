@@ -26,11 +26,12 @@ jobs:
 
       - name: Build & Pack
         shell: pwsh
+        env:
+          SL_REFERENCES: ${{ steps.refs.outputs.target }}
         run: |
           dotnet build RadioMenuAPI/RadioMenuAPI.csproj `
             -c Release `
-            -p:Version=${{ env.VERSION }} `
-            -p:SL_REFERENCES="${{ steps.refs.outputs.target }}"
+            -p:Version=${{ env.VERSION }}
 
       - name: Upload DLL to Release
         uses: softprops/action-gh-release@v2

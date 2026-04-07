@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using LabApi.Events.Arguments.PlayerEvents;
 using LabApi.Events.CustomHandlers;
@@ -211,7 +212,17 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         while (RadioMenuManager.PlayerActiveRadio.ContainsKey(playerId))
         {
             yield return Timing.WaitForSeconds(menu.HintDuration);
-            if (!RadioMenuManager.PlayerActiveRadio.ContainsKey(playerId)) break;
+            if (!RadioMenuManager.PlayerActiveRadio.TryGetValue(playerId, out var serial)) break;
+            if (!RadioMenuManager.MenusBySerial.ContainsKey(serial))
+            {
+                RadioMenuManager.CloseRadioMenu(player);
+                break;
+            }
+            if (!player.Items.Any(i => i.Type == ItemType.Radio && i.Serial == serial))
+            {
+                RadioMenuManager.CloseRadioMenu(player);
+                break;
+            }
             if (RadioMenuManager.PlayerSelections.TryGetValue(playerId, out var idx))
                 ShowMenuHint(player, menu, idx);
         }

@@ -7,6 +7,7 @@ using LabApi.Events.CustomHandlers;
 using LabApi.Features.Console;
 using LabApi.Features.Wrappers;
 using MEC;
+using RadioMenuAPI.ApiFeatures;
 using RadioMenuAPI.Events;
 
 namespace RadioMenuAPI;
@@ -201,10 +202,11 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         base.OnPlayerLeft(ev);
     }
 
-    public override void OnServerRoundRestarted()
+    public override void OnServerWaitingForPlayers()
     {
         RadioMenuManager.ClearAll();
-        base.OnServerRoundRestarted();
+        ApiManager.CheckForUpdates();
+        base.OnServerWaitingForPlayers();
     }
 
     private static IEnumerator<float> HintRefreshCoroutine(Player player, int playerId, RadioMenu menu)
@@ -218,11 +220,13 @@ internal class RadioMenuEventHandler : CustomEventsHandler
                 RadioMenuManager.CloseRadioMenu(player);
                 break;
             }
+
             if (!player.Items.Any(i => i.Type == ItemType.Radio && i.Serial == serial))
             {
                 RadioMenuManager.CloseRadioMenu(player);
                 break;
             }
+
             if (RadioMenuManager.PlayerSelections.TryGetValue(playerId, out var idx))
                 ShowMenuHint(player, menu, idx);
         }
@@ -250,7 +254,7 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         else
             ShowListHint(sb, menu, selectedIndex, hasLock, lockedIdx);
 
-        player.SendHint(sb.ToString(), menu.HintDuration - 0.1f);
+        player.SendHint(sb.ToString(), menu.HintDuration + 0.25f);
     }
 
     private static void ShowListHint(StringBuilder sb, RadioMenu menu, int selectedIndex, bool hasLock, int lockedIdx)
@@ -297,7 +301,8 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         if (description != null)
             sb.AppendLine($"<color=#AAAAAA><size=20>{description}</size></color>");
 
-        sb.AppendLine($"<color=#888888><size=18>{(hasLock ? RadioMenuAPI.Singleton.Config.FooterUnlockHint : RadioMenuAPI.Singleton.Config.FooterSelectHint)}</size></color>");
+        sb.AppendLine(
+            $"<color=#888888><size=18>{(hasLock ? RadioMenuAPI.Singleton.Config.FooterUnlockHint : RadioMenuAPI.Singleton.Config.FooterSelectHint)}</size></color>");
     }
 
     private static void ShowPagerHint(StringBuilder sb, RadioMenu menu, int selectedIndex, bool hasLock, int lockedIdx)
@@ -321,11 +326,13 @@ internal class RadioMenuEventHandler : CustomEventsHandler
             sb.AppendLine($"<color=#AAAAAA><size=20>{item.Description}</size></color>");
 
         if (!item.Enabled)
-            sb.AppendLine($"<color=#666666><size=18>{RadioMenuAPI.Singleton.Config.DisabledLabel.Trim()}</size></color>");
+            sb.AppendLine(
+                $"<color=#666666><size=18>{RadioMenuAPI.Singleton.Config.DisabledLabel.Trim()}</size></color>");
 
         sb.AppendLine();
         sb.AppendLine($"<color=#888888><size=16>{selectedIndex + 1} / {menu.Items.Count}</size></color>");
 
-        sb.AppendLine($"<color=#888888><size=18>{(hasLock ? RadioMenuAPI.Singleton.Config.FooterUnlockHint : RadioMenuAPI.Singleton.Config.FooterSelectHint)}</size></color>");
+        sb.AppendLine(
+            $"<color=#888888><size=18>{(hasLock ? RadioMenuAPI.Singleton.Config.FooterUnlockHint : RadioMenuAPI.Singleton.Config.FooterSelectHint)}</size></color>");
     }
 }

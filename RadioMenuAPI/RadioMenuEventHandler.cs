@@ -250,7 +250,7 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         else
             ShowListHint(sb, menu, selectedIndex, hasLock, lockedIdx);
 
-        player.SendHint(sb.ToString(), menu.HintDuration);
+        player.SendHint(sb.ToString(), menu.HintDuration - 0.1f);
     }
 
     private static void ShowListHint(StringBuilder sb, RadioMenu menu, int selectedIndex, bool hasLock, int lockedIdx)
@@ -286,7 +286,7 @@ internal class RadioMenuEventHandler : CustomEventsHandler
 
             sb.Append($"<color={color}>{prefix}{item.Label}");
             if (!item.Enabled)
-                sb.Append(" [disabled]");
+                sb.Append(RadioMenuAPI.Singleton.Config.DisabledLabel);
             sb.AppendLine("</color>");
 
             if (isSelected && !string.IsNullOrEmpty(item.Description))
@@ -297,8 +297,7 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         if (description != null)
             sb.AppendLine($"<color=#AAAAAA><size=20>{description}</size></color>");
 
-        var toggleHint = hasLock ? "Toggle = Unlock" : "Toggle = Select";
-        sb.AppendLine($"<color=#888888><size=18>Range = Next | {toggleHint}</size></color>");
+        sb.AppendLine($"<color=#888888><size=18>{(hasLock ? RadioMenuAPI.Singleton.Config.FooterUnlockHint : RadioMenuAPI.Singleton.Config.FooterSelectHint)}</size></color>");
     }
 
     private static void ShowPagerHint(StringBuilder sb, RadioMenu menu, int selectedIndex, bool hasLock, int lockedIdx)
@@ -322,12 +321,11 @@ internal class RadioMenuEventHandler : CustomEventsHandler
             sb.AppendLine($"<color=#AAAAAA><size=20>{item.Description}</size></color>");
 
         if (!item.Enabled)
-            sb.AppendLine("<color=#666666><size=18>[disabled]</size></color>");
+            sb.AppendLine($"<color=#666666><size=18>{RadioMenuAPI.Singleton.Config.DisabledLabel.Trim()}</size></color>");
 
         sb.AppendLine();
         sb.AppendLine($"<color=#888888><size=16>{selectedIndex + 1} / {menu.Items.Count}</size></color>");
 
-        var toggleHint = hasLock ? "Toggle = Unlock" : "Toggle = Select";
-        sb.AppendLine($"<color=#888888><size=18>Range = Next | {toggleHint}</size></color>");
+        sb.AppendLine($"<color=#888888><size=18>{(hasLock ? RadioMenuAPI.Singleton.Config.FooterUnlockHint : RadioMenuAPI.Singleton.Config.FooterSelectHint)}</size></color>");
     }
 }

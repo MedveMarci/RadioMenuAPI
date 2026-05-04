@@ -2,20 +2,24 @@ using System;
 using LabApi.Events.CustomHandlers;
 using LabApi.Features;
 using LabApi.Loader.Features.Plugins;
+using LabApi.Loader.Features.Plugins.Enums;
 
 namespace RadioMenuAPI;
 
-public class RadioMenuAPI : Plugin
+public class RadioMenuAPI : Plugin<Config>
 {
     private RadioMenuEventHandler? _eventHandler;
     public override string Name => "RadioMenuAPI";
     public override string Description => "API for creating custom radio menus.";
     public override string Author => "MedveMarci";
-    public override Version Version { get; } = new(1, 1, 0);
+    public override Version Version { get; } = new(1, 2, 0);
     public override Version RequiredApiVersion { get; } = new(LabApiProperties.CompiledVersion);
+    public override LoadPriority Priority => LoadPriority.Highest;
+    internal static RadioMenuAPI Singleton;
 
     public override void Enable()
     {
+        Singleton = this;
         _eventHandler = new RadioMenuEventHandler();
         CustomHandlersManager.RegisterEventsHandler(_eventHandler);
     }

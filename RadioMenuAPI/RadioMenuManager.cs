@@ -158,6 +158,12 @@ public static class RadioMenuManager
         return menu.Items[idx % menu.Items.Count];
     }
 
+    /// <summary>Returns true if the player currently has a radio menu open (i.e. is holding a radio with a menu).</summary>
+    public static bool IsMenuOpen(Player player)
+    {
+        return PlayerActiveRadio.ContainsKey(player.ReferenceHub.GetInstanceID());
+    }
+
     /// <summary>Removes all menus and player state. Call this on round restart or plugin disable.</summary>
     public static void ClearAll()
     {

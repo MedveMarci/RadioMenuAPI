@@ -9,7 +9,7 @@
 
         <AssemblyName>RadioMenuAPI</AssemblyName>
         <RootNamespace>RadioMenuAPI</RootNamespace>
-        <Version>1.2.0</Version>
+        <Version>1.3.0</Version>
         <Authors>MedveMarci</Authors>
         <Description>LabAPI plugin providing an API for creating interactive radio-based menus in SCP: Secret Laboratory.</Description>
         <PackageTags>scpsl labapi plugin radio menu</PackageTags>

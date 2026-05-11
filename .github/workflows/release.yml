@@ -7,6 +7,8 @@ on:
 jobs:
   publish:
     runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -40,7 +42,7 @@ jobs:
       - name: Upload DLL to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: RadioMenuAPI/bin/x64/Release/RadioMenuAPI.dll
+          files: RadioMenuAPI/bin/x64/Release/*.dll
 
       - name: Push to NuGet
         shell: pwsh

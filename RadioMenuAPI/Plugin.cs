@@ -13,7 +13,7 @@ public class RadioMenuAPI : Plugin<Config>
     public override string Name => "RadioMenuAPI";
     public override string Description => "API for creating custom radio menus.";
     public override string Author => "MedveMarci";
-    public override Version Version { get; } = new(1, 2, 0);
+    public override Version Version { get; } = new(1, 3, 0);
     public override Version RequiredApiVersion { get; } = new(LabApiProperties.CompiledVersion);
     public override LoadPriority Priority => LoadPriority.Highest;
 

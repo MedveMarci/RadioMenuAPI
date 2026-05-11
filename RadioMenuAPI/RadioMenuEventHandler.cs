@@ -245,9 +245,7 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         var sb = new StringBuilder();
 
         if (!string.IsNullOrEmpty(menu.Title))
-            sb.AppendLine($"<b><size=28>{menu.Title}</size></b>");
-
-        sb.AppendLine();
+            sb.Append($"<b><size=28>{menu.Title}</size></b>\n");
 
         if (menu.DisplayMode == MenuDisplayMode.Pager)
             ShowPagerHint(sb, menu, selectedIndex, hasLock, lockedIdx);
@@ -310,29 +308,30 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         var item = menu.Items[selectedIndex];
         var isLocked = hasLock && selectedIndex == lockedIdx;
 
-        string color;
+        string itemColor;
         if (!item.Enabled)
-            color = "#666666";
+            itemColor = "#555555";
         else if (isLocked)
-            color = "#00FF88";
+            itemColor = "#00FF88";
         else
-            color = "#FFFF00";
+            itemColor = "#FFD700";
 
-        var lockIndicator = isLocked ? " ✓" : "";
-        sb.AppendLine($"<color={color}><size=26>◄  {item.Label}{lockIndicator}  ►</size></color>");
+        sb.AppendLine($"<color={itemColor}><size=27><b>◀  {item.Label}  ▶</b></size></color>");
 
-        sb.AppendLine();
-        if (!string.IsNullOrEmpty(item.Description))
-            sb.AppendLine($"<color=#AAAAAA><size=20>{item.Description}</size></color>");
+        if (isLocked)
+            sb.AppendLine($"<color=#00FF88><size=17>  ✓ active</size></color>");
 
         if (!item.Enabled)
-            sb.AppendLine(
-                $"<color=#666666><size=18>{RadioMenuAPI.Singleton.Config.DisabledLabel.Trim()}</size></color>");
+            sb.AppendLine($"<color=#FF5555><size=17>  ✗ {RadioMenuAPI.Singleton.Config.DisabledLabel.Trim()}</size></color>");
+
+        if (!string.IsNullOrEmpty(item.Description))
+        {
+            sb.AppendLine();
+            sb.AppendLine($"<color=#BBBBBB><size=19>{item.Description}</size></color>");
+        }
 
         sb.AppendLine();
-        sb.AppendLine($"<color=#888888><size=16>{selectedIndex + 1} / {menu.Items.Count}</size></color>");
-
-        sb.AppendLine(
-            $"<color=#888888><size=18>{(hasLock ? RadioMenuAPI.Singleton.Config.FooterUnlockHint : RadioMenuAPI.Singleton.Config.FooterSelectHint)}</size></color>");
+        var footerHint = hasLock ? RadioMenuAPI.Singleton.Config.FooterUnlockHint : RadioMenuAPI.Singleton.Config.FooterSelectHint;
+        sb.AppendLine($"<color=#666666><size=16>[ {selectedIndex + 1} / {menu.Items.Count} ]  ·  {footerHint}</size></color>");
     }
 }

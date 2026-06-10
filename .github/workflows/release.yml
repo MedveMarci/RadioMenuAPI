@@ -42,12 +42,17 @@ jobs:
       - name: Upload DLL to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: RadioMenuAPI/bin/x64/Release/*.dll
+          files: RadioMenuAPI/bin/x64/Release/net48/*.dll
 
       - name: Push to NuGet
         shell: pwsh
         run: |
-          dotnet nuget push "RadioMenuAPI/bin/x64/Release/*.nupkg" `
-            --api-key ${{ secrets.NUGET_API_KEY }} `
-            --source https://api.nuget.org/v3/index.json `
-            --skip-duplicate
+          $nupkg = Get-ChildItem "RadioMenuAPI/bin/x64/Release/*.nupkg" | Select-Object -First 1
+          if ($nupkg) {
+            dotnet nuget push $nupkg.FullName `
+              --api-key ${{ secrets.NUGET_API_KEY }} `
+              --source https://api.nuget.org/v3/index.json `
+              --skip-duplicate
+          } else {
+            Write-Error "No .nupkg file found"
+          }

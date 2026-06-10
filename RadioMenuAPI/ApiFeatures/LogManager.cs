@@ -14,9 +14,7 @@ internal static class LogManager
     public static void Debug(string message)
     {
         History.Add(new LogEntry(DateTimeOffset.Now.ToUnixTimeMilliseconds(), "Debug", message));
-        if (!DebugEnabled)
-            return;
-
+        if (!DebugEnabled) return;
         Logger.Raw($"[DEBUG] [{RadioMenuAPI.Singleton.Name}] {message}", ConsoleColor.Green);
     }
 
@@ -36,28 +34,47 @@ internal static class LogManager
     {
         History.Add(new LogEntry(DateTimeOffset.Now.ToUnixTimeMilliseconds(), "Error", message));
         Logger.Raw($"[ERROR] [{RadioMenuAPI.Singleton.Name}] {message}", color);
+        ApiManager.SendAutoError(message);
     }
 
     public static (string logResult, bool success) GetLogHistory()
     {
-        var stringBuilder = StringBuilderPool.Shared.Rent();
+        var sb = StringBuilderPool.Shared.Rent();
         foreach (var log in History)
-            stringBuilder.AppendLine(
+            sb.AppendLine(
                 $"[{DateTimeOffset.FromUnixTimeMilliseconds(log.Timestamp):yyyy-MM-dd HH:mm:ss}] [{log.Level}] {log.Message}");
 
-        if (RadioMenuAPI.Singleton.Config != null)
+        if (RadioMenuAPI.Singleton?.Config != null)
         {
-            stringBuilder.AppendLine("\n--- AutoEvent Config ---\n");
-            stringBuilder.Append($"{YamlConfigParser.Serializer.Serialize(RadioMenuAPI.Singleton.Config)}");
+            sb.AppendLine("\n--- RadioMenuAPI Config ---\n");
+            sb.Append(YamlConfigParser.Serializer.Serialize(RadioMenuAPI.Singleton.Config));
         }
 
-        var logId = ApiManager.SendLogsAsync(StringBuilderPool.Shared.ToStringReturn(stringBuilder));
+        var logId = ApiManager.SendLogsAsync(StringBuilderPool.Shared.ToStringReturn(sb));
         return logId == null
             ? ("Failed to send LogHistory.", false)
-            : ($"Log history sent, received id: {logId}", true);
+            : ($"Log history sent. ID: {logId}", true);
+    }
+    
+    internal static string BuildLogContent(string triggerError = null)
+    {
+        var sb = StringBuilderPool.Shared.Rent();
+
+        if (!string.IsNullOrEmpty(triggerError))
+        {
+            sb.AppendLine("--- Auto Error ---");
+            sb.AppendLine(triggerError);
+            sb.AppendLine();
+        }
+
+        foreach (var log in History)
+            sb.AppendLine(
+                $"[{DateTimeOffset.FromUnixTimeMilliseconds(log.Timestamp):yyyy-MM-dd HH:mm:ss}] [{log.Level}] {log.Message}");
+
+        return StringBuilderPool.Shared.ToStringReturn(sb);
     }
 
-    private class LogEntry(long timestamp, string level, string message)
+    private sealed class LogEntry(long timestamp, string level, string message)
     {
         public long Timestamp { get; } = timestamp;
         public string Level { get; } = level;

@@ -319,7 +319,7 @@ internal class RadioMenuEventHandler : CustomEventsHandler
         sb.AppendLine($"<color={itemColor}><size=27><b>◀  {item.Label}  ▶</b></size></color>");
 
         if (isLocked)
-            sb.AppendLine($"<color=#00FF88><size=17>  ✓ active</size></color>");
+            sb.AppendLine("<color=#00FF88><size=17>  ✓ active</size></color>");
 
         if (!item.Enabled)
             sb.AppendLine($"<color=#FF5555><size=17>  ✗ {RadioMenuAPI.Singleton.Config.DisabledLabel.Trim()}</size></color>");

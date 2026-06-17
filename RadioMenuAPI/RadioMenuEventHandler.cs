@@ -23,29 +23,35 @@ internal class RadioMenuEventHandler : CustomEventsHandler
             oldSerial == ev.OldItem.Serial)
             RadioMenuManager.CloseRadioMenu(ev.Player);
 
-        if (ev.NewItem is { Type: ItemType.Radio } &&
-            RadioMenuManager.MenusBySerial.TryGetValue(ev.NewItem.Serial, out var newMenu))
+        if (ev.NewItem is { Type: ItemType.Radio })
         {
-            RadioMenuManager.PlayerActiveRadio[playerId] = ev.NewItem.Serial;
-            RadioMenuManager.PlayerSelections[playerId] = 0;
-            RadioMenuManager.PlayerLockedSelections.Remove(playerId);
+            RadioMenuManager.MenusBySerial.TryGetValue(ev.NewItem.Serial, out var newMenu);
+            if (newMenu == null && RadioMenuManager.PendingMenus.TryGetValue(playerId, out newMenu))
+                RadioMenuManager.MenusBySerial[ev.NewItem.Serial] = newMenu;
 
-            try
+            if (newMenu != null)
             {
-                newMenu.OnOpened?.Invoke(ev.Player, newMenu);
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"[RadioMenuAPI] OnOpened error: {ex}");
-            }
+                RadioMenuManager.PlayerActiveRadio[playerId] = ev.NewItem.Serial;
+                RadioMenuManager.PlayerSelections[playerId] = 0;
+                RadioMenuManager.PlayerLockedSelections.Remove(playerId);
 
-            RadioMenuEvents.InvokeMenuOpened(new MenuOpenedEventArgs(ev.Player, newMenu));
-            ShowMenuHint(ev.Player, newMenu, 0);
+                try
+                {
+                    newMenu.OnOpened?.Invoke(ev.Player, newMenu);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"[RadioMenuAPI] OnOpened error: {ex}");
+                }
 
-            if (RadioMenuManager.PlayerHintCoroutines.TryGetValue(playerId, out var oldCoroutine))
-                Timing.KillCoroutines(oldCoroutine);
-            RadioMenuManager.PlayerHintCoroutines[playerId] =
-                Timing.RunCoroutine(HintRefreshCoroutine(ev.Player, playerId, newMenu));
+                RadioMenuEvents.InvokeMenuOpened(new MenuOpenedEventArgs(ev.Player, newMenu));
+                ShowMenuHint(ev.Player, newMenu, 0);
+
+                if (RadioMenuManager.PlayerHintCoroutines.TryGetValue(playerId, out var oldCoroutine))
+                    Timing.KillCoroutines(oldCoroutine);
+                RadioMenuManager.PlayerHintCoroutines[playerId] =
+                    Timing.RunCoroutine(HintRefreshCoroutine(ev.Player, playerId, newMenu));
+            }
         }
 
         base.OnPlayerChangingItem(ev);

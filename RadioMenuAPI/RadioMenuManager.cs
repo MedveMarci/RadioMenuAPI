@@ -16,6 +16,9 @@ public static class RadioMenuManager
     internal static Dictionary<int, ushort> PlayerActiveRadio { get; } = new();
     internal static Dictionary<int, CoroutineHandle> PlayerHintCoroutines { get; } = new();
 
+    /// <summary>Holds menus that were created before AddItem's auto-equip event fires.</summary>
+    internal static Dictionary<int, RadioMenu> PendingMenus { get; } = new();
+
     /// <summary>Assigns a <see cref="RadioMenu" /> to a radio item by serial number.</summary>
     /// <param name="radioSerial">The serial number of the radio item.</param>
     /// <param name="menu">The menu to assign.</param>
@@ -82,11 +85,20 @@ public static class RadioMenuManager
     /// <returns>The created <see cref="RadioMenu" />, or <c>null</c> if the radio could not be added.</returns>
     public static RadioMenu? GiveRadioMenu(Player player, string? title = null)
     {
+        var playerId = player.ReferenceHub.GetInstanceID();
+        var menu = new RadioMenu { Title = title };
+
+        // Register before AddItem: auto-equip may fire OnPlayerChangingItem synchronously,
+        // before MenusBySerial is updated. PendingMenus lets the event handler find it.
+        PendingMenus[playerId] = menu;
         var item = player.AddItem(ItemType.Radio);
+        PendingMenus.Remove(playerId);
+
         if (item == null) return null;
 
-        var menu = new RadioMenu { Title = title };
-        MenusBySerial[item.Serial] = menu;
+        if (!MenusBySerial.ContainsKey(item.Serial))
+            MenusBySerial[item.Serial] = menu;
+
         return menu;
     }
 
@@ -98,10 +110,16 @@ public static class RadioMenuManager
     /// <returns>True if the radio was successfully added.</returns>
     public static bool GiveRadioMenu(Player player, RadioMenu menu)
     {
+        var playerId = player.ReferenceHub.GetInstanceID();
+        PendingMenus[playerId] = menu;
         var item = player.AddItem(ItemType.Radio);
+        PendingMenus.Remove(playerId);
+
         if (item == null) return false;
 
-        MenusBySerial[item.Serial] = menu;
+        if (!MenusBySerial.ContainsKey(item.Serial))
+            MenusBySerial[item.Serial] = menu;
+
         return true;
     }
 
@@ -171,6 +189,7 @@ public static class RadioMenuManager
         PlayerSelections.Clear();
         PlayerLockedSelections.Clear();
         PlayerActiveRadio.Clear();
+        PendingMenus.Clear();
         foreach (var handle in PlayerHintCoroutines.Values)
             Timing.KillCoroutines(handle);
         PlayerHintCoroutines.Clear();

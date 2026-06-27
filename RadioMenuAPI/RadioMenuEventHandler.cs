@@ -211,7 +211,7 @@ internal class RadioMenuEventHandler : CustomEventsHandler
     public override void OnServerWaitingForPlayers()
     {
         RadioMenuManager.ClearAll();
-        ApiManager.CheckForUpdates();
+        VersionManager.CheckForUpdates();
         base.OnServerWaitingForPlayers();
     }
 

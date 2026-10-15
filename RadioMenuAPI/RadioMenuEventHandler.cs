@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using LabApi.Events.Arguments.PlayerEvents;
+using LabApi.Events.Arguments.ServerEvents;
 using LabApi.Events.CustomHandlers;
 using LabApi.Features.Console;
 using LabApi.Features.Wrappers;
@@ -32,8 +33,7 @@ internal class RadioMenuEventHandler : CustomEventsHandler
             if (newMenu != null)
             {
                 RadioMenuManager.PlayerActiveRadio[playerId] = ev.NewItem.Serial;
-                RadioMenuManager.PlayerSelections[playerId] = 0;
-                RadioMenuManager.PlayerLockedSelections.Remove(playerId);
+                RadioMenuManager.RestoreSelection(playerId, newMenu);
 
                 try
                 {
@@ -45,7 +45,9 @@ internal class RadioMenuEventHandler : CustomEventsHandler
                 }
 
                 RadioMenuEvents.InvokeMenuOpened(new MenuOpenedEventArgs(ev.Player, newMenu));
-                ShowMenuHint(ev.Player, newMenu, 0);
+
+                RadioMenuManager.PlayerSelections.TryGetValue(playerId, out var openedIndex);
+                ShowMenuHint(ev.Player, newMenu, openedIndex);
 
                 if (RadioMenuManager.PlayerHintCoroutines.TryGetValue(playerId, out var oldCoroutine))
                     Timing.KillCoroutines(oldCoroutine);
@@ -182,18 +184,38 @@ internal class RadioMenuEventHandler : CustomEventsHandler
 
     public override void OnPlayerDroppingItem(PlayerDroppingItemEventArgs ev)
     {
-        if (ev.Item is not { Type: ItemType.Radio })
-        {
-            base.OnPlayerDroppingItem(ev);
-            return;
-        }
-
-        var playerId = ev.Player.ReferenceHub.GetInstanceID();
-        if (RadioMenuManager.PlayerActiveRadio.TryGetValue(playerId, out var serial) &&
-            serial == ev.Item.Serial)
-            RadioMenuManager.CloseRadioMenu(ev.Player);
+        if (ev.Item is { Type: ItemType.Radio } &&
+            RadioMenuManager.MenusBySerial.TryGetValue(ev.Item.Serial, out var menu) &&
+            !menu.AllowDropping)
+            ev.IsAllowed = false;
 
         base.OnPlayerDroppingItem(ev);
+    }
+    
+    public override void OnServerPickupCreated(PickupCreatedEventArgs ev)
+    {
+        if (ev.Pickup is { Type: ItemType.Radio } pickup &&
+            RadioMenuManager.MenusBySerial.TryGetValue(pickup.Serial, out var menu) &&
+            !menu.AllowDropping)
+        {
+            RadioMenuManager.MenusBySerial.Remove(pickup.Serial);
+            pickup.Destroy();
+        }
+
+        base.OnServerPickupCreated(ev);
+    }
+
+    public override void OnPlayerDroppedItem(PlayerDroppedItemEventArgs ev)
+    {
+        if (ev.Pickup is { Type: ItemType.Radio })
+        {
+            var playerId = ev.Player.ReferenceHub.GetInstanceID();
+            if (RadioMenuManager.PlayerActiveRadio.TryGetValue(playerId, out var serial) &&
+                serial == ev.Pickup.Serial)
+                RadioMenuManager.CloseRadioMenu(ev.Player);
+        }
+
+        base.OnPlayerDroppedItem(ev);
     }
 
     public override void OnPlayerChangedRole(PlayerChangedRoleEventArgs ev)
@@ -205,6 +227,7 @@ internal class RadioMenuEventHandler : CustomEventsHandler
     public override void OnPlayerLeft(PlayerLeftEventArgs ev)
     {
         RadioMenuManager.CleanupPlayer(ev.Player);
+        RadioMenuManager.ForgetSelections(ev.Player);
         base.OnPlayerLeft(ev);
     }
 

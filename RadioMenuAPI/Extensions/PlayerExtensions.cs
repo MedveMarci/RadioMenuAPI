@@ -48,6 +48,26 @@ public static class PlayerExtensions
         return RadioMenuManager.GetSelectedIndex(player);
     }
 
+    /// <summary>
+    ///     Gets the highlighted item index of <paramref name="menu" />, or the remembered one if the menu isn't open
+    ///     (see <see cref="RadioMenu.RememberSelection" />). Returns -1 if there is none.
+    /// </summary>
+    /// <param name="player">The player to check.</param>
+    /// <param name="menu">The menu to check.</param>
+    public static int GetSelectedRadioMenuIndex(this Player player, RadioMenu menu)
+    {
+        return RadioMenuManager.GetSelectedIndex(player, menu);
+    }
+
+    /// <summary>Highlights the item at <paramref name="index" /> in the player's open menu.</summary>
+    /// <param name="player">The player whose menu to change.</param>
+    /// <param name="index">The index of the item to highlight.</param>
+    /// <returns><c>true</c> if the player has an open menu and the index is valid.</returns>
+    public static bool SetSelectedRadioMenuIndex(this Player player, int index)
+    {
+        return RadioMenuManager.SetSelectedIndex(player, index);
+    }
+
     /// <summary>Returns <c>true</c> if the player currently has a radio menu open.</summary>
     /// <param name="player">The player to check.</param>
     public static bool HasActiveRadioMenu(this Player player)

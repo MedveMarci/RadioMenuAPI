@@ -16,6 +16,9 @@ public static class RadioMenuManager
     internal static Dictionary<int, ushort> PlayerActiveRadio { get; } = new();
     internal static Dictionary<int, CoroutineHandle> PlayerHintCoroutines { get; } = new();
 
+    /// <summary>Selections of menus with <see cref="RadioMenu.RememberSelection" />, kept while the radio is put away.</summary>
+    internal static Dictionary<(int PlayerId, RadioMenu Menu), RememberedSelection> RememberedSelections { get; } = new();
+
     /// <summary>Holds menus that were created before AddItem's auto-equip event fires.</summary>
     internal static Dictionary<int, RadioMenu> PendingMenus { get; } = new();
 
@@ -144,6 +147,71 @@ public static class RadioMenuManager
     }
 
     /// <summary>
+    ///     Gets the highlighted item index of a specific menu for a player. If the menu isn't open, the remembered
+    ///     selection is returned (see <see cref="RadioMenu.RememberSelection" />). Returns -1 if there is none.
+    /// </summary>
+    public static int GetSelectedIndex(Player player, RadioMenu menu)
+    {
+        var id = player.ReferenceHub.GetInstanceID();
+        if (IsActiveMenu(id, menu))
+            return PlayerSelections.TryGetValue(id, out var idx) ? idx : -1;
+
+        return RememberedSelections.TryGetValue((id, menu), out var remembered) ? remembered.Index : -1;
+    }
+
+    /// <summary>
+    ///     Highlights the item at <paramref name="index" /> in the player's open menu and redraws it.
+    ///     Does not fire <see cref="RadioMenuEvents.ItemChanged" />.
+    /// </summary>
+    /// <returns>True if the player has an open menu and the index is valid.</returns>
+    public static bool SetSelectedIndex(Player player, int index)
+    {
+        var id = player.ReferenceHub.GetInstanceID();
+        if (!PlayerActiveRadio.TryGetValue(id, out var serial) || !MenusBySerial.TryGetValue(serial, out var menu))
+            return false;
+        if (index < 0 || index >= menu.Items.Count)
+            return false;
+
+        PlayerSelections[id] = index;
+        RadioMenuEventHandler.ShowMenuHint(player, menu, index);
+        return true;
+    }
+
+    public static void ForgetSelections(RadioMenu menu)
+    {
+        foreach (var key in RememberedSelections.Keys.Where(k => k.Menu == menu).ToList())
+            RememberedSelections.Remove(key);
+    }
+
+    public static void ForgetSelections(Player player)
+    {
+        var id = player.ReferenceHub.GetInstanceID();
+        foreach (var key in RememberedSelections.Keys.Where(k => k.PlayerId == id).ToList())
+            RememberedSelections.Remove(key);
+    }
+
+    private static bool IsActiveMenu(int playerId, RadioMenu menu)
+    {
+        return PlayerActiveRadio.TryGetValue(playerId, out var serial) &&
+               MenusBySerial.TryGetValue(serial, out var active) && active == menu;
+    }
+
+    internal static void RestoreSelection(int playerId, RadioMenu menu)
+    {
+        PlayerSelections[playerId] = 0;
+        PlayerLockedSelections.Remove(playerId);
+
+        if (!menu.RememberSelection || !RememberedSelections.TryGetValue((playerId, menu), out var remembered))
+            return;
+
+        if (remembered.Index >= 0 && remembered.Index < menu.Items.Count)
+            PlayerSelections[playerId] = remembered.Index;
+
+        if (menu.LockOnSelect && remembered.LockedIndex >= 0 && remembered.LockedIndex < menu.Items.Count)
+            PlayerLockedSelections[playerId] = remembered.LockedIndex;
+    }
+
+    /// <summary>
     ///     Returns the index of the item the player has locked via <see cref="RadioMenu.LockOnSelect" />,
     ///     or -1 if nothing is locked.
     /// </summary>
@@ -190,6 +258,7 @@ public static class RadioMenuManager
         PlayerLockedSelections.Clear();
         PlayerActiveRadio.Clear();
         PendingMenus.Clear();
+        RememberedSelections.Clear();
         foreach (var handle in PlayerHintCoroutines.Values)
             Timing.KillCoroutines(handle);
         PlayerHintCoroutines.Clear();
@@ -220,6 +289,10 @@ public static class RadioMenuManager
         if (PlayerActiveRadio.TryGetValue(id, out var serial) &&
             MenusBySerial.TryGetValue(serial, out var menu))
         {
+            if (menu.RememberSelection && PlayerSelections.TryGetValue(id, out var index))
+                RememberedSelections[(id, menu)] = new RememberedSelection(index,
+                    PlayerLockedSelections.TryGetValue(id, out var locked) ? locked : -1);
+
             try
             {
                 menu.OnClosed?.Invoke(player, menu);

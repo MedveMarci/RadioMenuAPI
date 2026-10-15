@@ -1,9 +1,8 @@
 # RadioMenuAPI
 
-[![Version](https://img.shields.io/github/v/release/MedveMarci/RadioMenuAPI?&label=Version&color=d500ff)](https://github.com/MedveMarci/RadioMenuAPI/releases/latest) [![LabAPI Version](https://img.shields.io/badge/LabAPI_Version-1.1.6-b84ee87)](https://github.com/northwood-studios/LabAPI/releases/tag/1.1.7) [![SCP:SL Version](https://img.shields.io/badge/SCP:SL_Version-14.2.7-blue?&color=e5b200)](https://store.steampowered.com/app/700330/SCP_Secret_Laboratory/) [![Total Downloads](https://img.shields.io/github/downloads/MedveMarci/RadioMenuAPI/total.svg?label=Total%20Downloads&color=&color=ffbf00)]()<br>
+[![Version](https://img.shields.io/github/v/release/MedveMarci/RadioMenuAPI?label=Version&color=d500ff)](https://github.com/MedveMarci/RadioMenuAPI/releases/latest) [![LabAPI Version](https://img.shields.io/badge/LabAPI_Version-1.1.7-51f4ff)](https://github.com/northwood-studios/LabAPI/releases/tag/1.1.7) [![SCP:SL Version](https://img.shields.io/badge/SCP:SL_Version-14.2.7-e5b200)](https://store.steampowered.com/app/700330/SCP_Secret_Laboratory/) [![Downloads](https://img.shields.io/github/downloads/MedveMarci/RadioMenuAPI/total?label=Downloads&color=ffbf00)](https://github.com/MedveMarci/RadioMenuAPI/releases) [![License](https://img.shields.io/github/license/MedveMarci/RadioMenuAPI?label=License&color=2ea44f)](LICENSE)
 
-A [LabAPI](https://github.com/northwood-studios/LabAPI) plugin
-for [SCP: Secret Laboratory](https://store.steampowered.com/app/700330/SCP_Secret_Laboratory/) that provides an API for
+An SCP: Secret Laboratory [LabAPI](https://github.com/northwood-studios/LabAPI) plugin which provides an API for
 creating interactive radio-based menus for players.
 
 ---
@@ -25,8 +24,10 @@ The current selection and the full item list are shown to the player as an on-sc
 
 ## Installation
 
-1. Download the latest `RadioMenuAPI.dll` from [Releases](../../releases).
-2. Place it in your server's `LabAPI/plugins/global` folder.
+1. Download `RadioMenuAPI.dll` from the [latest release](https://github.com/MedveMarci/RadioMenuAPI/releases/latest).
+2. Move `RadioMenuAPI.dll` to:
+    - Windows: `%AppData%\SCP Secret Laboratory\LabAPI\plugins\global\`
+    - Linux: `~/.config/SCP Secret Laboratory/LabAPI/plugins/global/`
 3. Restart the server.
 
 Other plugins that depend on RadioMenuAPI must also be placed in the plugins folder. RadioMenuAPI must load before
@@ -183,6 +184,8 @@ player.HasActiveRadioMenu();        // bool
 player.GetActiveRadioMenu();        // RadioMenu?
 player.GetSelectedRadioMenuItem();  // RadioMenuItem?
 player.GetSelectedRadioMenuIndex(); // int
+player.GetSelectedRadioMenuIndex(menu); // int, also works while the radio is put away (RememberSelection)
+player.SetSelectedRadioMenuIndex(2);    // highlight an item in the open menu
 player.CloseRadioMenu();            // force-close without unequipping
 player.ClearRadioMenus();           // remove all menus from this player
 
@@ -199,6 +202,7 @@ RadioMenuManager.CloseRadioMenu(player);
 RadioMenuManager.GetMenusByTag("tag");
 RadioMenuManager.TryGetMenuByTag("tag", out var menu);
 RadioMenuManager.RemoveInactiveMenus();
+RadioMenuManager.ForgetSelections(menu);   // forget the remembered selections of a menu
 RadioMenuManager.ClearAll();
 ```
 
@@ -215,6 +219,23 @@ RadioMenuManager.ClearAll();
 | `OnClosed`                | `Action<Player, RadioMenu>?` | `null`  | Fired when the player unequips this radio                                          |
 | `SuppressDefaultBehavior` | `bool`                       | `true`  | Suppresses battery drain and radio sounds                                          |
 | `HintDuration`            | `float`                      | `1`     | How long (seconds) the hint stays visible after each input                         |
+| `RememberSelection`       | `bool`                       | `false` | Keeps the highlighted (and locked) item when the radio is put away and restores it |
+| `AllowDropping`           | `bool`                       | `true`  | If false, the radio can't be dropped or thrown, and it's removed on death/disconnect |
+
+### Remembering the selection
+
+By default a menu always opens on its first item. With `RememberSelection` the highlighted (and locked) item is
+saved when the player puts the radio away, and the menu opens on it again:
+
+```csharp
+var menu = new RadioMenu { Title = "Vote", RememberSelection = true };
+
+// Works even if the player is not holding the radio right now.
+int choice = player.GetSelectedRadioMenuIndex(menu); // -1 if they never opened it
+
+// When the menu is not needed anymore:
+RadioMenuManager.ForgetSelections(menu);
+```
 
 ## RadioMenuItem options
 
@@ -256,6 +277,18 @@ public class MyEventHandler : CustomEventsHandler
 
 ---
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
+
+---
+
+## Support
+
+<a href="https://discord.gg/KmpA8cfaSA"><img src="https://www.allkpop.com/upload/2021/01/content/262046/1611711962-discord-button.png" height="80"></a>
+
+---
+
 ## Credits
 
-- Created by [MedveMarci](https://github.com/MedveMarci)
+- Made by [MedveMarci](https://github.com/MedveMarci)

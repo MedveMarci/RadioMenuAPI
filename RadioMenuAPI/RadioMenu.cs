@@ -47,6 +47,21 @@ public class RadioMenu
     public bool LockOnSelect { get; set; } = false;
 
     /// <summary>
+    ///     If true, the highlighted (and locked) item is remembered per player when the radio is put away,
+    ///     and the menu opens on it again when the radio is equipped. The remembered value can be read with
+    ///     <see cref="RadioMenuManager.GetSelectedIndex(Player, RadioMenu)" /> even while the radio isn't in hand.
+    ///     Default: false (the menu always opens on the first item).
+    /// </summary>
+    public bool RememberSelection { get; set; } = false;
+
+    /// <summary>
+    ///     If false, players can't drop (or throw) a radio that has this menu, and the radio is removed instead of
+    ///     dropped when the player dies or disconnects.
+    ///     Default: true.
+    /// </summary>
+    public bool AllowDropping { get; set; } = true;
+
+    /// <summary>
     ///     If true, the default radio behavior (battery drain, sound) is suppressed.
     ///     Default: true.
     /// </summary>

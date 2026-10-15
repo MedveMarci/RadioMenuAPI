@@ -42,7 +42,7 @@ jobs:
       - name: Upload DLL to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: RadioMenuAPI/bin/x64/Release/net48/*.dll
+          files: RadioMenuAPI/bin/x64/Release/net48/RadioMenuAPI.dll
 
       - name: Push to NuGet
         shell: pwsh
